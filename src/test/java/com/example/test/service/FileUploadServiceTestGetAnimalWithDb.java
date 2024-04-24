@@ -1,21 +1,29 @@
 package com.example.test.service;
 
 import com.example.test.entity.Animal;
+import com.example.test.repo.AnimalRepo;
 import jakarta.xml.bind.JAXBException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
-class FileUploadServiceTestGetAnimal {
+@SpringBootTest
+class FileUploadServiceTestGetAnimalWithDb {
+    @Autowired
     private FileUploadService fileUploadService;
+    @Autowired
+    private AnimalRepo animalRepo;
 
     @BeforeEach
     void setUp() throws JAXBException {
-        fileUploadService = new FileUploadService();
+        fileUploadService = new FileUploadService(animalRepo);
         byte[] csvFileData = "Name,Type,Sex,Weight,Cost\nFido,Dog,Male,25,30\nWhiskers,Cat,Female,5,15".getBytes(StandardCharsets.UTF_8);
         byte[] xmlFileData = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                 "<animals>" +
@@ -34,24 +42,29 @@ class FileUploadServiceTestGetAnimal {
                 "<cost>10</cost>" +
                 "</animal>" +
                 "</animals>").getBytes(StandardCharsets.UTF_8);
-        fileUploadService.getAnimals().addAll(fileUploadService.processCSVFile(csvFileData));
-        fileUploadService.getAnimals().addAll(fileUploadService.processXMLFile(xmlFileData));
+        animalRepo.saveAll(fileUploadService.processCSVFile(csvFileData));
+        animalRepo.saveAll(fileUploadService.processXMLFile(xmlFileData));
     }
+
     @Test
     void testGetAnimalsByType() {
         List<Animal> dogs = fileUploadService.getAnimalBy("Dog", null, null, null);
         assertEquals(2, dogs.size());
+        animalRepo.deleteAll();
     }
+
     @Test
     void testGetAnimalsBySex() {
         List<Animal> females = fileUploadService.getAnimalBy(null, null, "Female", null);
         assertEquals(2, females.size());
+        animalRepo.deleteAll();
     }
 
     @Test
     void testGetAnimalsByCategory() {
         List<Animal> category2Animals = fileUploadService.getAnimalBy(null, "CATEGORY_2", null, null);
         assertEquals(2, category2Animals.size());
+        animalRepo.deleteAll();
     }
 
     @Test
@@ -61,5 +74,6 @@ class FileUploadServiceTestGetAnimal {
         assertEquals("Cat", sortedAnimals.get(1).getType());
         assertEquals("Dog", sortedAnimals.get(2).getType());
         assertEquals("Dog", sortedAnimals.get(3).getType());
+        animalRepo.deleteAll();
     }
 }

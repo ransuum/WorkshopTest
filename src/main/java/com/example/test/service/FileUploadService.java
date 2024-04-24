@@ -4,6 +4,7 @@ import com.example.test.entity.Animal;
 import com.example.test.entity.Animals;
 import com.example.test.enums.Category;
 import com.example.test.exception.ValueNotCorrectException;
+import com.example.test.repo.AnimalRepo;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
@@ -11,6 +12,7 @@ import lombok.Data;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,16 +27,20 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 @Service
-@Data
 public class FileUploadService {
-    private List<Animal> animals = new ArrayList<>();
+
+    private AnimalRepo animalRepo;
+    @Autowired
+    public FileUploadService(AnimalRepo animalRepo) {
+        this.animalRepo = animalRepo;
+    }
 
     public String uploadFile(MultipartFile file) {
         try {
             if (Objects.requireNonNull(file.getOriginalFilename()).endsWith(".csv")) {
-                animals = processCSVFile(file.getBytes());
+                animalRepo.saveAll(processCSVFile(file.getBytes()));
             } else if (file.getOriginalFilename().endsWith(".xml")) {
-                animals = processXMLFile(file.getBytes());
+                animalRepo.saveAll(processXMLFile(file.getBytes()));
             } else {
                 return "Unsupported file format";
             }
@@ -104,26 +110,25 @@ public class FileUploadService {
         List<Animal> newAnimal = new ArrayList<>();
         if (type != null) {
             if (sortBy != null) {
-                return sort(sortBy, animals.stream().filter(animal -> animal.getType().equals(type)));
+                return sort(sortBy, animalRepo.findAllByType(type).stream());
             } else {
-                return animals.stream().filter(animal -> animal.getType().equals(type)).toList();
+                return animalRepo.findAllByType(type);
             }
         } else if (sex != null) {
             if (sortBy != null) {
-                return sort(sortBy, animals.stream().filter(animal -> animal.getSex().equals(sex)));
+                return sort(sortBy, animalRepo.findAllBySex(sex).stream());
             } else {
-                return animals.stream().filter(animal -> animal.getSex().equals(sex)).toList();
+                return animalRepo.findAllBySex(sex);
             }
         } else if (category != null) {
             Category category1 = Category.valueOf(category.toUpperCase());
             if (sortBy != null) {
-                return sort(sortBy, animals.stream().filter(animal -> animal.getCategory().name().equals(category1.name())));
+                return sort(sortBy, animalRepo.findAllByCategory(category1).stream());
             } else {
-                return animals.stream().filter(animal -> animal.getCategory().name().equals(category1.name())).toList();
+                return animalRepo.findAllByCategory(category1);
             }
         } else if (sortBy != null) {
-            Stream<Animal> stream = animals.stream();
-            return sort(sortBy, stream);
+            return sort(sortBy, animalRepo.findAll().stream());
         } else {
             throw new ValueNotCorrectException("Incorrect value for sortBy parameter");
         }

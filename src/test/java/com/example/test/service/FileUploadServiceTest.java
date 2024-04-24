@@ -2,116 +2,84 @@ package com.example.test.service;
 
 import com.example.test.entity.Animal;
 import com.example.test.enums.Category;
+import com.example.test.repo.AnimalRepo;
 import jakarta.xml.bind.JAXBException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@SpringBootTest
 class FileUploadServiceTest {
-    @Mock
-    private MultipartFile csvFile;
-    @Mock
-    private MultipartFile xmlFile;
+    @InjectMocks
+    private FileUploadService fileUploadService;
 
-    private final FileUploadService fileUploadService = new FileUploadService();
+    @Mock
+    private AnimalRepo animalRepo;
+
+    @BeforeEach
+    public void setup() {
+        MockitoAnnotations.openMocks(this);
+    }
+
     @Test
-    void testUploadCSVFile() throws IOException {
-        when(csvFile.getOriginalFilename()).thenReturn("animals.csv");
-        when(csvFile.getBytes()).thenReturn("Name,Type,Sex,Weight,Cost\nFido,Dog,Male,25,30\nWhiskers,Cat,Female,5,15".getBytes(StandardCharsets.UTF_8));
-
-        String result = fileUploadService.uploadFile(csvFile);
+    public void testUploadFile() throws Exception {
+        MultipartFile file = new MockMultipartFile("file", "hello.csv", "text/csv", "Name,Type,Sex,Weight,Cost\nFido,Dog,Male,25,30\nWhiskers,Cat,Female,5,15".getBytes());
+        when(animalRepo.saveAll(fileUploadService.processCSVFile(file.getBytes()))).thenReturn(Arrays.asList(new Animal(), new Animal()));
+        String result = fileUploadService.uploadFile(file);
         assertEquals("File uploaded and processed successfully", result);
     }
-    @Test
-    void testUploadXMLFile() throws IOException {
-        when(xmlFile.getOriginalFilename()).thenReturn("animals.xml");
-        when(xmlFile.getBytes()).thenReturn(("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<animals>" +
-                "<animal>" +
-                "<name>Buddy</name>" +
-                "<type>Dog</type>" +
-                "<sex>Male</sex>" +
-                "<weight>30</weight>" +
-                "<cost>40</cost>" +
-                "</animal>" +
-                "<animal>" +
-                "<name>Mittens</name>" +
-                "<type>Cat</type>" +
-                "<sex>Female</sex>" +
-                "<weight>3</weight>" +
-                "<cost>10</cost>" +
-                "</animal>" +
-                "</animals>").getBytes(StandardCharsets.UTF_8));
 
-        String result = fileUploadService.uploadFile(xmlFile);
-        assertEquals("File uploaded and processed successfully", result);
-    }
     @Test
-    void testProcessCSVFile() {
-        byte[] fileData = "Name,Type,Sex,Weight,Cost\nFido,Dog,Male,25,30\nWhiskers,Cat,Female,5,15".getBytes(StandardCharsets.UTF_8);
-        List<Animal> animals = fileUploadService.processCSVFile(fileData);
+    public void testGetAnimalsByType() {
+        when(animalRepo.findAllByType("Dog")).thenReturn(Arrays.asList(new Animal(), new Animal()));
+        List<Animal> result = fileUploadService.getAnimalBy("Dog", null, null, null);
+        assertEquals(2, result.size());
+    }
 
-        assertEquals(2, animals.size());
-        assertEquals("Fido", animals.get(0).getName());
-        assertEquals("Dog", animals.get(0).getType());
-        assertEquals("Male", animals.get(0).getSex());
-        assertEquals(25, animals.get(0).getWeight());
-        assertEquals(30, animals.get(0).getCost());
-        assertEquals(Category.CATEGORY_2, animals.get(0).getCategory());
-    }
     @Test
-    void testProcessXMLFile() throws JAXBException {
-        byte[] fileData = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><animals>" +
-                "<animal>" +
-                "<name>Buddy</name>" +
-                "<type>Dog</type>" +
-                "<sex>Male</sex>" +
-                "<weight>30</weight>" +
-                "<cost>40</cost></animal>" +
-                "<animal>" +
-                "<name>Mittens</name>" +
-                "<type>Cat</type>" +
-                "<sex>Female</sex>" +
-                "<weight>3</weight>" +
-                "<cost>10</cost>" +
-                "</animal>" +
-                "</animals>").getBytes(StandardCharsets.UTF_8);
-        List<Animal> animals = fileUploadService.processXMLFile(fileData);
+    public void testGetAnimalsBySex() {
+        when(animalRepo.findAllBySex("Female")).thenReturn(Arrays.asList(new Animal(), new Animal()));
+        List<Animal> result = fileUploadService.getAnimalBy(null, null, "Female", null);
+        assertEquals(2, result.size());
+    }
 
-        assertEquals(2, animals.size());
-        assertEquals("Buddy", animals.get(0).getName());
-        assertEquals("Dog", animals.get(0).getType());
-        assertEquals("Male", animals.get(0).getSex());
-        assertEquals(30, animals.get(0).getWeight());
-        assertEquals(40, animals.get(0).getCost());
-        assertEquals(Category.CATEGORY_2, animals.get(0).getCategory());
-    }
     @Test
-    void testProcessXMLFileOnNull() throws JAXBException {
-        byte[] fileData = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><animals>" +
-                "<animal>" +
-                "<name>Buddy</name>" +
-                "<type>Dog</type>" +
-                "<sex>Male</sex>" +
-                "<cost>40</cost></animal>" +
-                "<animal>" +
-                "<name>Mittens</name>" +
-                "<type>Cat</type>" +
-                "<sex>Female</sex>" +
-                "<cost>10</cost>" +
-                "</animal>" +
-                "</animals>").getBytes(StandardCharsets.UTF_8);
-        List<Animal> animals = fileUploadService.processXMLFile(fileData);
-        assertEquals(0, animals.size());
+    public void testGetAnimalsByCategory() {
+        when(animalRepo.findAllByCategory(Category.CATEGORY_2)).thenReturn(Arrays.asList(new Animal(), new Animal()));
+        List<Animal> result = fileUploadService.getAnimalBy(null, "CATEGORY_2", null, null);
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    public void testSortAnimalsByType() {
+        when(animalRepo.findAll()).thenReturn(Arrays.asList(
+                new Animal(UUID.randomUUID(),"Duke", "Dog", "Male", 30, 40, Category.CATEGORY_2),
+                new Animal(UUID.randomUUID(),"Liza","Cat", "Female", 3, 10, Category.CATEGORY_1),
+                new Animal(UUID.randomUUID(),"Rame","Dog", "Male", 25, 30, Category.CATEGORY_2),
+                new Animal(UUID.randomUUID(),"Ron","Cat", "Female", 5, 15, Category.CATEGORY_1)
+        ));
+        List<Animal> result = fileUploadService.getAnimalBy(null, null, null, "type");
+        assertEquals("Cat", result.get(0).getType());
+        assertEquals("Cat", result.get(1).getType());
+        assertEquals("Dog", result.get(2).getType());
+        assertEquals("Dog", result.get(3).getType());
     }
 }

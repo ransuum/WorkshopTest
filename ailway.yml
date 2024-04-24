@@ -1,4 +1,0 @@
-name: WorkshopTest
-type: web
-build_command: mvn clean package
-run_command: java -jar target/*.jar

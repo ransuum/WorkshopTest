@@ -10,8 +10,8 @@ NEED .csv or .xml file with these characteristics:
 }
 
 .xml{
-  <animals>
-  <animal>
+  /<animals>
+  /<animal>
   <name>Milo</name>
   <type>cat</type>
   <sex>male</sex>
